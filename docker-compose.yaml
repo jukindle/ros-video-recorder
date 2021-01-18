@@ -1,0 +1,12 @@
+version: '3'
+services:
+  ros_video_recorder:
+    container_name: ros_video_recorder
+    image: "hiltitpr/ros_video_recorder:latest"
+    build: .
+    network_mode: host
+    volumes:
+      - ./OUTPUT:/OUTPUT
+    environment:
+      - ROS_MASTER_URI
+      - ROS_IP
