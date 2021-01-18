@@ -21,11 +21,23 @@ def opencv_version():
 
 
 class VideoFrames:
-    def __init__(self, image_topic, target_x, target_y, target_w, target_h):
-        self.image_sub = rospy.Subscriber(image_topic, Image, self.callback_image, queue_size=1)
+    def __init__(self, image_topic, target_x=0, target_y=0, target_w='', target_h=''):
+        if target_w == '' and target_w == '':
+            msg = rospy.wait_for_message(image_topic, Image)
+            target_w = msg.width
+            target_h = msg.height
+        elif target_w == '':
+            msg = rospy.wait_for_message(image_topic, Image)
+            msg_aspect_ratio = msg.width/msg.height
+            target_w = int(np.floor(target_h*msg_aspect_ratio))
+        elif target_h == '':
+            msg = rospy.wait_for_message(image_topic, Image)
+            msg_aspect_ratio = msg.width/msg.height
+            target_h = int(np.floor(target_w/msg_aspect_ratio))
         self.bridge = CvBridge()
         self.frames = []
         self.target_x, self.target_y, self.target_w, self.target_h = target_x, target_y, target_w, target_h
+        self.image_sub = rospy.Subscriber(image_topic, Image, self.callback_image, queue_size=1)
 
     def callback_image(self, data):
         try:
@@ -69,7 +81,7 @@ class VideoRecorder:
             raise
 
         self.output_path = output_path
-        
+
         if self.output_path:
             self.video_writer = cv2.VideoWriter(output_path, fourcc, output_fps, (output_width, output_height))
         else:
@@ -133,32 +145,56 @@ if __name__ == '__main__':
     rospy.init_node('video_recorder', anonymous=True)
 
     # parameters
-    output_width = int(rospy.get_param('~output_width', '640'))
-    output_height = int(rospy.get_param('~output_height', '480'))
+    output_width = int(rospy.get_param('~output_width', '0'))
+    output_height = int(rospy.get_param('~output_height', '0'))
     output_fps = int(rospy.get_param('~output_fps', '30'))
     output_format = rospy.get_param('~output_format', 'xvid')
     output_topic = rospy.get_param('~output_topic', '')
-    output_path = rospy.get_param('~output_path', '')
+    output_path = rospy.get_param('~output_path', 'ros_recording.avi')
     output_path = output_path.replace('[timestamp]', datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
-    num_videos = int(rospy.get_param('~num_videos', '1000'))
+    num_videos = int(rospy.get_param('~num_videos', '0'))
 
-    ft = VideoRecorder(output_width, output_height, output_fps, output_format, output_path)
-
-    # get parameters for videos and initialize subscriptions
-    for idx in range(num_videos):
-        source_info = rospy.get_param('~source%d' % (idx+1), '')
-        if not source_info:
-            break
+    if num_videos == 0:
+        source_info = rospy.get_param('~source', '')
         source_info_list = source_info.split(',')
-
         source_topic = source_info_list[0].strip()
-        target_x = int(source_info_list[1])
-        target_y = int(source_info_list[2])
-        target_w = int(source_info_list[3])
-        target_h = int(source_info_list[4])
-
-        vf = VideoFrames(source_topic, target_x, target_y, target_w, target_h)
+        vf = VideoFrames(source_topic)
+        ft = VideoRecorder(vf.target_w, vf.target_h, output_fps, output_format, output_path)
         ft.add_subscription(vf)
+    else:
+        # Automatically detect width and height
+        if output_width == 0 or output_height == 0:
+            for idx in range(num_videos):
+                source_info = rospy.get_param('~source%d' % (idx+1), '')
+                if not source_info:
+                    break
+                source_info_list = source_info.split(',')
+                source_topic = source_info_list[0].strip()
+                target_x = int(source_info_list[1])
+                target_y = int(source_info_list[2])
+                target_w = int(source_info_list[3])
+                target_h = int(source_info_list[4])
+
+                output_width = max(output_width, target_x + target_w)
+                output_height = max(output_height, target_y + target_h)
+
+        ft = VideoRecorder(output_width, output_height, output_fps, output_format, output_path)
+
+        # get parameters for videos and initialize subscriptions
+        for idx in range(num_videos):
+            source_info = rospy.get_param('~source%d' % (idx+1), '')
+            if not source_info:
+                break
+            source_info_list = source_info.split(',')
+
+            source_topic = source_info_list[0].strip()
+            target_x = int(source_info_list[1])
+            target_y = int(source_info_list[2])
+            target_w = int(source_info_list[3])
+            target_h = int(source_info_list[4])
+
+            vf = VideoFrames(source_topic, target_x, target_y, target_w, target_h)
+            ft.add_subscription(vf)
 
     if output_topic:
         ft.set_broadcast(output_topic)
