@@ -9,25 +9,8 @@ RUN apt update --fix-missing
 # # Install apt dependencies
 RUN apt update && apt install -y \
   python-catkin-tools \
-  ros-melodic-cv-bridge
-#   python-rosdep \
-#   ros-melodic-tf \
-#   ros-melodic-velodyne-gazebo-plugins \
-#   ros-melodic-velodyne-description \
-#   ros-melodic-hector-gazebo-plugins \
-#   ros-melodic-urdf \
-#   ros-melodic-xacro \
-#   libeigen3-dev \
-#   ros-melodic-controller-manager-msgs \
-#   ros-melodic-control-msgs \
-#   python3 python3-pip \
-#   gstreamer1.0-tools gstreamer1.0-libav libgstreamer1.0-dev \
-#   libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1.0-dev \
-#   gstreamer1.0-plugins-good gstreamer1.0-plugins-base \
-#   ros-melodic-rgbd-launch \
-#   ros-melodic-camera-calibration-parsers \
-#   ros-melodic-camera-info-manager \
-#   ros-melodic-gazebo-plugins
+  ros-melodic-cv-bridge \
+  ffmpeg
 
 # Set the working directory.
 RUN mkdir -p /catkin_ws/src
